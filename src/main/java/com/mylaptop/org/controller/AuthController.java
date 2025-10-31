@@ -4,15 +4,19 @@ import com.mylaptop.org.model.User;
 import com.mylaptop.org.model.Role;
 import com.mylaptop.org.repository.UserRepository;
 import com.mylaptop.org.repository.RoleRepository;
-import com.mylaptop.org.security.JwtService;
+import com.mylaptop.org.security.JwtTokenHelper;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -23,21 +27,26 @@ public class AuthController {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
-    private final JwtService jwtService;
+    private final JwtTokenHelper jwtTokenHelper;
 
-    public AuthController(UserRepository userRepository,
-                          RoleRepository roleRepository,
-                          PasswordEncoder passwordEncoder,
-                          AuthenticationManager authenticationManager,
-                          JwtService jwtService) {
+    @Autowired
+    private UserDetailsService userDetailsService;
+
+    public AuthController(
+            UserRepository userRepository,
+            RoleRepository roleRepository,
+            PasswordEncoder passwordEncoder,
+            AuthenticationManager authenticationManager,
+            JwtTokenHelper jwtTokenHelper
+    ) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
-        this.jwtService = jwtService;
+        this.jwtTokenHelper = jwtTokenHelper;
     }
 
- // imports omitted for brevity
+    // ✅ REGISTER Endpoint
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody User userRequest) {
         if (userRequest == null || userRequest.getEmail() == null) {
@@ -49,21 +58,24 @@ public class AuthController {
         }
 
         // find ROLE_USER or create if absent
+//        Role userRole = roleRepository.findByName("ROLE_ADMIN")
+//                .orElseGet(() -> {
+//                    Role r = new Role();
+//                    r.setName("ROLE_ADMIN");
+//                    return roleRepository.save(r);
+//                });
         Role userRole = roleRepository.findByName("ROLE_USER")
-                .orElseGet(() -> {
-                    Role r = new Role();
-                    r.setName("ROLE_USER");
-                    r.setCode(501);
-                    return roleRepository.save(r);
-                });
+        		.orElseGet(() -> {
+        			Role r = new Role();
+        			r.setName("ROLE_USER");
+        			return roleRepository.save(r);
+        		});
 
-        // Fill defaults when fields are missing
         String fullName = (userRequest.getFullName() == null || userRequest.getFullName().isBlank())
                 ? "User" : userRequest.getFullName();
         String phone = (userRequest.getPhone() == null) ? "Not provided" : userRequest.getPhone();
         String address = (userRequest.getAddress() == null) ? "Not provided" : userRequest.getAddress();
 
-        // create user entity (don't reuse userRequest instance to avoid unexpected fields)
         User user = new User();
         user.setFullName(fullName);
         user.setEmail(userRequest.getEmail());
@@ -71,20 +83,21 @@ public class AuthController {
         user.setPhone(phone);
         user.setAddress(address);
         user.setActive(true);
-        user.setRole(userRole);
+        user.setRoles(Set.of(userRole)); // ✅ Corrected
 
         User saved = userRepository.save(user);
 
-        String token = jwtService.generateToken(saved.getEmail());
+        // ✅ generate JWT token using JwtTokenHelper
+        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
+        String token = jwtTokenHelper.generateToken(userDetails);
 
-        // build safe response (do not include password)
         Map<String, Object> userSafe = Map.of(
                 "id", saved.getId(),
                 "fullName", saved.getFullName(),
                 "email", saved.getEmail(),
                 "phone", saved.getPhone(),
                 "address", saved.getAddress(),
-                "role", saved.getRole() != null ? saved.getRole().getName() : null
+                "roles", saved.getRoles()
         );
 
         return ResponseEntity.status(201).body(Map.of(
@@ -94,8 +107,7 @@ public class AuthController {
         ));
     }
 
-
-    // ✅ Login Endpoint
+    // ✅ LOGIN Endpoint
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@RequestBody Map<String, String> loginData) {
         String email = loginData.get("email");
@@ -108,7 +120,9 @@ public class AuthController {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        String token = jwtService.generateToken(user.getEmail());
+        // ✅ use JwtTokenHelper instead of JwtService
+        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
+        String token = jwtTokenHelper.generateToken(userDetails);
 
         return ResponseEntity.ok(Map.of(
                 "message", "Login successful",
@@ -117,7 +131,7 @@ public class AuthController {
                         "id", user.getId(),
                         "fullName", user.getFullName(),
                         "email", user.getEmail(),
-                        "role", user.getRole().getName()
+                        "roles", user.getRoles()
                 )
         ));
     }

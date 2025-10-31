@@ -1,8 +1,5 @@
 package com.mylaptop.org.security;
 
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.http.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -11,45 +8,51 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import javax.servlet.*;
+import javax.servlet.http.*;
 import java.io.IOException;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    @Autowired private JwtTokenHelper jwtTokenHelper;
-    @Autowired private CustomUserDetailsService userDetailsService;
+    @Autowired
+    private JwtTokenHelper jwtTokenHelper;
+
+    @Autowired
+    private CustomUserDetailService customUserDetailService;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
             throws ServletException, IOException {
 
-        final String authHeader = request.getHeader("Authorization");
-
+        final String requestTokenHeader = request.getHeader("Authorization");
         String username = null;
         String jwtToken = null;
 
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            jwtToken = authHeader.substring(7);
+        // Token format: Bearer <token>
+        if (requestTokenHeader != null && requestTokenHeader.startsWith("Bearer ")) {
+            jwtToken = requestTokenHeader.substring(7);
             try {
                 username = jwtTokenHelper.getUsernameFromToken(jwtToken);
             } catch (Exception e) {
-                logger.error("JWT parsing failed: " + e.getMessage());
+                logger.error("JWT Token parsing error: " + e.getMessage());
             }
         }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            UserDetails userDetails = customUserDetailService.loadUserByUsername(username);
 
             if (jwtTokenHelper.validateToken(jwtToken, userDetails)) {
                 UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails, null, userDetails.getAuthorities());
+                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         }
-        logger.info("JWT Username Extracted: " + username);
 
         filterChain.doFilter(request, response);
     }

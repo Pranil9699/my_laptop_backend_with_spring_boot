@@ -2,14 +2,16 @@ package com.mylaptop.org.config;
 
 import com.mylaptop.org.security.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.*;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.*;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.*;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.*;
@@ -21,26 +23,31 @@ import java.util.List;
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
-    @Autowired private CustomUserDetailsService userDetailsService;
-    @Autowired private JwtAuthenticationEntryPoint jwtAuthEntryPoint;
-    @Autowired private JwtAuthenticationFilter jwtFilter;
+    @Autowired
+    private CustomUserDetailService customUserDetailService;
 
-//    private static final String[] PUBLIC_URLS = {
-//            "/api/auth/**",
-//            "/swagger-ui/**", "/v3/api-docs/**"
-//    };
+    @Autowired
+    private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+
+    @Autowired
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
+
     private static final String[] PUBLIC_URLS = {
-    		"/api/auth/**","/api/home/**","/api/admin/**","/api/user/**",
-    		"/swagger-ui/**", "/v3/api-docs/**"
+            "/api/auth/**",
+            "/api/public/**",
+            "/swagger-ui/**",
+            "/v3/api-docs/**"
     };
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder());
+        auth.userDetailsService(customUserDetailService).passwordEncoder(passwordEncoder());
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
     @Bean
     @Override
@@ -48,37 +55,34 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         return super.authenticationManagerBean();
     }
 
-    // simple permissive CORS config for dev - adjust production settings
+    // ✅ Allow CORS for frontend communication
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOriginPatterns(List.of("*"));
-        cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
-        cfg.setAllowedHeaders(List.of("*"));
-//        cfg.addAllowedHeader("Authorization");
-		cfg.addAllowedHeader("Content-Type");
-		cfg.addAllowedHeader("Accept");
-        cfg.setAllowCredentials(true);
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
+        config.setAllowCredentials(true);
         var source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", cfg);
-        
+        source.registerCorsConfiguration("/**", config);
         return source;
     }
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http.cors().and().csrf().disable()
+        http
+            .cors().and()
+            .csrf().disable()
             .authorizeHttpRequests()
-               .antMatchers(PUBLIC_URLS).permitAll()
-//               .antMatchers("/api/admin/**").hasRole("ADMIN")
-//               .antMatchers("/api/user/**").hasAnyRole("USER", "ADMIN")
-
-               .anyRequest().authenticated()
+                .antMatchers(PUBLIC_URLS).permitAll()
+                .antMatchers("/api/admin/**").hasRole("ADMIN")
+                .antMatchers("/api/user/**").hasAnyRole("USER", "ADMIN")
+                .anyRequest().authenticated()
             .and()
-               .exceptionHandling().authenticationEntryPoint(jwtAuthEntryPoint)
+                .exceptionHandling().authenticationEntryPoint(jwtAuthenticationEntryPoint)
             .and()
-               .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
 
-        http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
     }
 }

@@ -59,6 +59,30 @@ public class AdminController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of("message", saved.size() + " laptops added successfully"));
     }
+ // ✅ UPDATE full laptop details
+    @PutMapping("/laptops/{id}")
+    public ResponseEntity<?> updateLaptopDetails(@PathVariable Long id, @RequestBody Laptop updatedLaptop) {
+        Optional<Laptop> opt = laptopRepository.findById(id);
+        if (opt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Laptop not found"));
+        }
+
+        Laptop l = opt.get();
+        l.setBrand(updatedLaptop.getBrand());
+        l.setModel(updatedLaptop.getModel());
+        l.setProcessor(updatedLaptop.getProcessor());
+        l.setGraphicsCard(updatedLaptop.getGraphicsCard());
+        l.setRam(updatedLaptop.getRam());
+        l.setStorage(updatedLaptop.getStorage());
+        l.setConditionStatus(updatedLaptop.getConditionStatus());
+        l.setDescription(updatedLaptop.getDescription());
+        l.setImageName(updatedLaptop.getImageName());
+        l.setRentPerDay(updatedLaptop.getRentPerDay());
+
+        laptopRepository.save(l);
+        return ResponseEntity.ok(Map.of("message", "Laptop updated successfully"));
+    }
 
  // ✅ UPDATE - Update laptop availability and rent
     @PutMapping("/laptops/{id}/availableAndRentperDay")
@@ -117,7 +141,7 @@ public class AdminController {
     // ========================= 2️⃣ USER MANAGEMENT =========================
     @GetMapping("/users")
     public ResponseEntity<List<Map<String, Object>>> getAllUsers() {
-        List<User> users = userRepository.findAllByRoleName("ROLE_USER");
+        List<User> users = userRepository.findAllByRoles_Name("ROLE_USER");
 
         List<Map<String, Object>> safe = users.stream().map(u -> {
             Map<String, Object> m = new java.util.HashMap<>();
@@ -127,7 +151,8 @@ public class AdminController {
             m.put("phone", u.getPhone());
             m.put("address", u.getAddress());
             m.put("active", u.getActive());
-            m.put("role", u.getRole() != null ? u.getRole().getName() : null);
+            m.put("role", u.getRoles() != null ? u.getRoles() : null);
+//            m.put("role", u.getRole() != null ? u.getRole().getName() : null);
             return m;
         }).toList();
 
@@ -176,13 +201,36 @@ public class AdminController {
 
 
     // ========================= 3️⃣ RENTAL MANAGEMENT =========================
-    // ✅ Get all rentals
+ // ✅ Get all rentals (fixed)
     @GetMapping("/rentals")
-    public ResponseEntity<List<Rental>> getAllRentals() {
-        return ResponseEntity.ok(rentalRepository.findAll());
+    public ResponseEntity<List<Map<String, Object>>> getAllPaidRentals() {
+        List<Rental> rentals = rentalRepository.findAll();
+
+        System.out.println("HI");
+        System.out.println("Total rentals: " + rentals.size());
+
+        List<Map<String, Object>> result = rentals.stream()
+                .filter(r -> r.getPayment() != null && 
+                        ("SUCCESS".equalsIgnoreCase(r.getPayment().getStatus()) || 
+                         "COMPLETED".equalsIgnoreCase(r.getPayment().getStatus())))
+                .map(r -> Map.<String, Object>of(
+                        "id", r.getId(),
+                        "userInfo", r.getUser().getId() + "-" + r.getUser().getFullName(),
+                        "laptopInfo", r.getLaptop().getId() + "-" + r.getLaptop().getBrand() + "-" + r.getLaptop().getModel(),
+                        "startDate", r.getStartDate(),
+                        "endDate", r.getEndDate(),
+                        "status", r.getStatus(),
+                        "paymentStatus", r.getPayment().getStatus(),
+                        "amount", r.getPayment().getAmount()
+                ))
+                .toList();
+
+        System.out.println("Filtered rentals (with payment): " + result.size());
+        return ResponseEntity.ok(result);
     }
 
-    // ✅ Update rental status (e.g., returned or ongoing)
+
+ // ✅ Update rental status (e.g., returned or ongoing)
     @PutMapping("/rentals/{id}/status")
     public ResponseEntity<Map<String, String>> updateRentalStatus(
             @PathVariable Long id, @RequestParam String status) {
@@ -197,8 +245,25 @@ public class AdminController {
         rental.setStatus(status);
         rentalRepository.save(rental);
 
-        return ResponseEntity.ok(Map.of("message", "Rental status updated successfully"));
+        // ✅ If rental is completed → make laptop available again
+        if ("COMPLETED".equalsIgnoreCase(status) || "CANCELLED".equalsIgnoreCase(status)) {
+            Laptop laptop = rental.getLaptop();
+            laptop.setAvailable(true);
+            laptopRepository.save(laptop);
+        }else {
+        	Laptop laptop = rental.getLaptop();
+            laptop.setAvailable(false);
+            laptopRepository.save(laptop);
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Rental status updated successfully",
+                "rentalId", String.valueOf(rental.getId()),
+                "status", rental.getStatus(),
+                "laptopAvailable", String.valueOf(rental.getLaptop().getAvailable())
+        ));
     }
+
 
 
     // ========================= 4️⃣ PAYMENT MANAGEMENT =========================

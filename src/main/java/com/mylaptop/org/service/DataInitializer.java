@@ -17,12 +17,14 @@ public class DataInitializer {
     public void init() {
         if (roleRepo.count() == 0) {
         	Role userRole = new Role();
+        	userRole.setId(501);
         	userRole.setName("ROLE_USER");
-        	userRole.setCode(501);
+//        	userRole.setCode(501);
 
         	Role adminRole = new Role();
+        	adminRole.setId(502);
         	adminRole.setName("ROLE_ADMIN");
-        	adminRole.setCode(502);
+//        	adminRole.setCode(502);
 
         	roleRepo.save(userRole);
         	roleRepo.save(adminRole);

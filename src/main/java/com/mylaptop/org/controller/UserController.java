@@ -57,6 +57,7 @@ public class UserController {
     }
 
     // 🛒 4️⃣ Rent a laptop (by userId)
+ // 🛒 4️⃣ Rent a laptop (by userId)
     @PostMapping("/rent/{laptopId}/user/{userId}")
     public ResponseEntity<?> rentLaptop(@PathVariable Long laptopId, @PathVariable Long userId) {
         Optional<User> userOpt = userRepository.findById(userId);
@@ -78,15 +79,19 @@ public class UserController {
         rental.setStatus("ONGOING");
         rentalRepository.save(rental);
 
+        // Mark laptop unavailable
         laptop.setAvailable(false);
         laptopRepository.save(laptop);
 
+        // ✅ Assuming Laptop entity has field `rentPrice`
         return ResponseEntity.ok(Map.of(
                 "message", "Laptop rented successfully",
                 "rentalId", rental.getId(),
-                "laptop", laptop.getModel()
+                "laptop", laptop.getModel(),
+                "rentAmount", laptop.getRentPerDay()
         ));
     }
+
 
     // 💵 5️⃣ Make payment for rental
     @PostMapping("/payment/{rentalId}/user/{userId}")
@@ -108,23 +113,21 @@ public class UserController {
         // ✅ Extract values from request
         String method = paymentData.get("paymentMethod").toString();
         BigDecimal amount = new BigDecimal(paymentData.get("amount").toString());
-        String transactionId = paymentData.get("transactionId") != null
-                ? paymentData.get("transactionId").toString()
-                : "TXN-" + System.currentTimeMillis();
 
-        // ✅ Create payment
         Payment payment = new Payment();
         payment.setRental(rental);
         payment.setAmount(amount);
         payment.setPaymentMethod(method);
-        payment.setTransactionId(transactionId);
         payment.setStatus("SUCCESS");
-        payment.setPaymentVerification(method.equalsIgnoreCase("CASH") ? "NOT_VERIFIED" : "VERIFIED");
+        payment.setPaymentVerification(
+                method.equalsIgnoreCase("CASH") ? "NOT_VERIFIED" : "VERIFIED"
+        );
         payment.setPaymentDate(LocalDateTime.now());
+
+        // No need to set transactionId manually — @PrePersist handles it
 
         paymentRepository.save(payment);
 
-        // ✅ Build response
         return ResponseEntity.ok(Map.of(
                 "message", "Payment recorded successfully",
                 "paymentId", payment.getId(),
@@ -134,17 +137,22 @@ public class UserController {
         ));
     }
 
+
     @GetMapping("/rentals/{userId}")
     public ResponseEntity<?> getUserRentals(@PathVariable Long userId) {
         Optional<User> userOpt = userRepository.findById(userId);
+        System.out.println("Hi-1");
         if (userOpt.isEmpty()) {
+        	System.out.println("Hi-2");
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "User not found"));
         }
 
-        List<Rental> rentals = rentalRepository.findByUser(userOpt.get());
+        System.out.println("Hi-3");
+        List<Rental> rentals = rentalRepository.findRentalsWithDetailsByUserId(userOpt.get().getId());
         List<RentalResponse> response = rentals.stream()
         	    .map(rental -> {
+        	    	System.out.println("Hi-4");
         	        RentalResponse dto = new RentalResponse();
         	        dto.setRentalId(rental.getId());
         	        dto.setStartDate(rental.getStartDate());
@@ -162,6 +170,7 @@ public class UserController {
         	    })
         	    .toList(); // ✅ works on Java 16+
         
+        System.out.println("Hi-5");
 
         return ResponseEntity.ok(response);
     }

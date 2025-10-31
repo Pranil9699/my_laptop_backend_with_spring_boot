@@ -1,16 +1,13 @@
 package com.mylaptop.org.model;
 
-
 import javax.persistence.*;
-
 import java.math.BigDecimal;
 import java.util.*;
 
-import javax.persistence.GenerationType;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 @Entity
 @Table(name = "laptops")
-
 public class Laptop {
 
     @Id
@@ -23,134 +20,48 @@ public class Laptop {
     private String ram;
     private String storage;
     private String graphicsCard;
-    private String conditionStatus;  // NEW / USED / REPAIRED
+    private String conditionStatus;
     private BigDecimal rentPerDay;
 
     @Column(length = 500)
     private String description;
-
-    private String imageName;  // 🖼️ image file name or path
-
-    // 🔒 Determines if the laptop is visible for renting on website
-    private Boolean available = true;  
-
-    // 🟥 If blocked manually by admin (not visible at all)
+    private String imageName;
+    private Boolean available = true;
     private Boolean blocked = false;
 
     @OneToMany(mappedBy = "laptop", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference("laptop-rentals")
     private List<Rental> rentals = new ArrayList<>();
 
-	public Long getId() {
-		return id;
-	}
-
-	public void setId(Long id) {
-		this.id = id;
-	}
-
-	public String getBrand() {
-		return brand;
-	}
-
-	public void setBrand(String brand) {
-		this.brand = brand;
-	}
-
-	public String getModel() {
-		return model;
-	}
-
-	public void setModel(String model) {
-		this.model = model;
-	}
-
-	public String getProcessor() {
-		return processor;
-	}
-
-	public void setProcessor(String processor) {
-		this.processor = processor;
-	}
-
-	public String getRam() {
-		return ram;
-	}
-
-	public void setRam(String ram) {
-		this.ram = ram;
-	}
-
-	public String getStorage() {
-		return storage;
-	}
-
-	public void setStorage(String storage) {
-		this.storage = storage;
-	}
-
-	public String getGraphicsCard() {
-		return graphicsCard;
-	}
-
-	public void setGraphicsCard(String graphicsCard) {
-		this.graphicsCard = graphicsCard;
-	}
-
-	public String getConditionStatus() {
-		return conditionStatus;
-	}
-
-	public void setConditionStatus(String conditionStatus) {
-		this.conditionStatus = conditionStatus;
-	}
-
-	public BigDecimal getRentPerDay() {
-		return rentPerDay;
-	}
-
-	public void setRentPerDay(BigDecimal rentPerDay) {
-		this.rentPerDay = rentPerDay;
-	}
-
-	public String getDescription() {
-		return description;
-	}
-
-	public void setDescription(String description) {
-		this.description = description;
-	}
-
-	public String getImageName() {
-		return imageName;
-	}
-
-	public void setImageName(String imageName) {
-		this.imageName = imageName;
-	}
-
-	public Boolean getAvailable() {
-		return available;
-	}
-
-	public void setAvailable(Boolean available) {
-		this.available = available;
-	}
-
-	public Boolean getBlocked() {
-		return blocked;
-	}
-
-	public void setBlocked(Boolean blocked) {
-		this.blocked = blocked;
-	}
-
-	public List<Rental> getRentals() {
-		return rentals;
-	}
-
-	public void setRentals(List<Rental> rentals) {
-		this.rentals = rentals;
-	}
+    // --- Getters / Setters ---
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getBrand() { return brand; }
+    public void setBrand(String brand) { this.brand = brand; }
+    public String getModel() { return model; }
+    public void setModel(String model) { this.model = model; }
+    public String getProcessor() { return processor; }
+    public void setProcessor(String processor) { this.processor = processor; }
+    public String getRam() { return ram; }
+    public void setRam(String ram) { this.ram = ram; }
+    public String getStorage() { return storage; }
+    public void setStorage(String storage) { this.storage = storage; }
+    public String getGraphicsCard() { return graphicsCard; }
+    public void setGraphicsCard(String graphicsCard) { this.graphicsCard = graphicsCard; }
+    public String getConditionStatus() { return conditionStatus; }
+    public void setConditionStatus(String conditionStatus) { this.conditionStatus = conditionStatus; }
+    public BigDecimal getRentPerDay() { return rentPerDay; }
+    public void setRentPerDay(BigDecimal rentPerDay) { this.rentPerDay = rentPerDay; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+    public String getImageName() { return imageName; }
+    public void setImageName(String imageName) { this.imageName = imageName; }
+    public Boolean getAvailable() { return available; }
+    public void setAvailable(Boolean available) { this.available = available; }
+    public Boolean getBlocked() { return blocked; }
+    public void setBlocked(Boolean blocked) { this.blocked = blocked; }
+    public List<Rental> getRentals() { return rentals; }
+    public void setRentals(List<Rental> rentals) { this.rentals = rentals; }
 
 	public Laptop(Long id, String brand, String model, String processor, String ram, String storage,
 			String graphicsCard, String conditionStatus, BigDecimal rentPerDay, String description, String imageName,

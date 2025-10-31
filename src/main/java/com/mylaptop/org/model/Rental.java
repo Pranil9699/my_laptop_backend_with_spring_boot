@@ -1,15 +1,12 @@
 package com.mylaptop.org.model;
 
-
 import javax.persistence.*;
+import java.time.LocalDate;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
-import java.time.LocalDate;
-
 @Entity
 @Table(name = "rentals")
-
 public class Rental {
 
     @Id
@@ -18,84 +15,43 @@ public class Rental {
 
     private LocalDate startDate;
     private LocalDate endDate;
-
-    private String status; // ACTIVE / COMPLETED / CANCELLED
+    private String status;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    @JsonBackReference
+    @JoinColumn(name = "user_id", nullable = false)
+    @JsonBackReference("user-rentals")
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "laptop_id")
-    @JsonBackReference
+    @JoinColumn(name = "laptop_id", nullable = false)
+    @JsonBackReference("laptop-rentals")
     private Laptop laptop;
 
     @OneToOne(mappedBy = "rental", cascade = CascadeType.ALL)
-    @JsonBackReference
+    @JsonBackReference("rental-payment")
     private Payment payment;
 
-	public Long getId() {
-		return id;
-	}
+    // --- Getters / Setters ---
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public LocalDate getStartDate() { return startDate; }
+    public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
+    public LocalDate getEndDate() { return endDate; }
+    public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
+    public Laptop getLaptop() { return laptop; }
+    public void setLaptop(Laptop laptop) { this.laptop = laptop; }
+    public Payment getPayment() { return payment; }
+    public void setPayment(Payment payment) { this.payment = payment; }
 
-	public void setId(Long id) {
-		this.id = id;
-	}
-
-	public LocalDate getStartDate() {
-		return startDate;
-	}
-
-	public void setStartDate(LocalDate startDate) {
-		this.startDate = startDate;
-	}
-
-	public LocalDate getEndDate() {
-		return endDate;
-	}
-
-	public void setEndDate(LocalDate endDate) {
-		this.endDate = endDate;
-	}
-
-	public String getStatus() {
-		return status;
-	}
-
-	public void setStatus(String status) {
-		this.status = status;
-	}
-
-	public User getUser() {
-		return user;
-	}
-
-	public void setUser(User user) {
-		this.user = user;
-	}
-
-	public Laptop getLaptop() {
-		return laptop;
-	}
-
-	public void setLaptop(Laptop laptop) {
-		this.laptop = laptop;
-	}
-
-	public Payment getPayment() {
-		return payment;
-	}
-
-	public void setPayment(Payment payment) {
-		this.payment = payment;
-	}
 
 	public Rental() {
 		super();
 		// TODO Auto-generated constructor stub
 	}
-
 	public Rental(Long id, LocalDate startDate, LocalDate endDate, String status, User user, Laptop laptop,
 			Payment payment) {
 		super();

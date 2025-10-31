@@ -7,41 +7,27 @@ import javax.persistence.*;
 public class Role {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private int id; // Example: 1 = ROLE_USER, 2 = ROLE_ADMIN
 
     @Column(unique = true, nullable = false)
-    private String name;  // e.g. ROLE_USER / ROLE_ADMIN
+    private String name; // ROLE_USER / ROLE_ADMIN
 
-    @Column(unique = true, nullable = false)
-    private Integer code; // e.g. 501, 502
-
-    // 🧱 Constructors
     public Role() {}
 
-    public Role(String name, Integer code) {
-        this.name = name;
-        this.code = code;
-    }
-
-    public Role(Long id, String name, Integer code) {
+    public Role(int id, String name) {
         this.id = id;
         this.name = name;
-        this.code = code;
     }
 
-    // 🧱 Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    // 🔹 Getters & Setters
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
-    public Integer getCode() { return code; }
-    public void setCode(Integer code) { this.code = code; }
-
     @Override
     public String toString() {
-        return "Role{" + "id=" + id + ", name='" + name + '\'' + ", code=" + code + '}';
+        return "Role{" + "id=" + id + ", name='" + name + '\'' + '}';
     }
 }
