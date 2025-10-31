@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: my-laptop-backend
+    env: java
+    plan: free
+    buildCommand: ./mvnw clean package -DskipTests
+    startCommand: java -jar target/my_laptop_backend-1-0.0.1-SNAPSHOT.jar
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        value: jdbc:postgresql://dpg-d42cfr95pdvs73f5es1g-a.oregon-postgres.render.com/my_laptop_rental_system_db
+      - key: SPRING_DATASOURCE_USERNAME
+        value: my_laptop_rental_system_db_user
+      - key: SPRING_DATASOURCE_PASSWORD
+        value: nmhItEhTxdvld6W5GcSZoBogRmq6JUXR
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: update
+      - key: SPRING_JPA_SHOW_SQL
+        value: "true"
+      - key: SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL
+        value: "true"
+      - key: SERVER_PORT
+        value: 8080
+      - key: JAVA_OPTS
+        value: -Xmx512m -Xss512k
+
+databases:
+  - name: my_laptop_rental_system_db
+    plan: free
