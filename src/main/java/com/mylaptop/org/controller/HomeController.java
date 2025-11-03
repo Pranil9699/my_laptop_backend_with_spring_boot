@@ -43,7 +43,14 @@ public class HomeController {
             return Map.of("error", "Laptop not found.");
         }
     }
-
+    
+    @GetMapping("/laptops/search")
+public List<Laptop> searchLaptops(@RequestParam("query") String query) {
+    if (query == null || query.trim().isEmpty()) {
+        return laptopRepository.findByAvailableTrueAndBlockedFalse();
+    }
+    return laptopRepository.searchLaptops(query.trim());
+}
     // 🏫 About Us
     @GetMapping("/about")
     public Map<String, String> getAboutInfo() {
