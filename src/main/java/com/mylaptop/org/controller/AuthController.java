@@ -15,6 +15,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Set;
 
@@ -48,64 +49,71 @@ public class AuthController {
 
     // ✅ REGISTER Endpoint
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody User userRequest) {
-        if (userRequest == null || userRequest.getEmail() == null) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Invalid request"));
-        }
-
-        if (userRepository.existsByEmail(userRequest.getEmail())) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Email already registered"));
-        }
-
-        // find ROLE_USER or create if absent
-//        Role userRole = roleRepository.findByName("ROLE_ADMIN")
-//                .orElseGet(() -> {
-//                    Role r = new Role();
-//                    r.setName("ROLE_ADMIN");
-//                    return roleRepository.save(r);
-//                });
-        Role userRole = roleRepository.findByName("ROLE_USER")
-        		.orElseGet(() -> {
-        			Role r = new Role();
-        			r.setName("ROLE_USER");
-        			return roleRepository.save(r);
-        		});
-
-        String fullName = (userRequest.getFullName() == null || userRequest.getFullName().isBlank())
-                ? "User" : userRequest.getFullName();
-        String phone = (userRequest.getPhone() == null) ? "Not provided" : userRequest.getPhone();
-        String address = (userRequest.getAddress() == null) ? "Not provided" : userRequest.getAddress();
-
-        User user = new User();
-        user.setFullName(fullName);
-        user.setEmail(userRequest.getEmail());
-        user.setPassword(passwordEncoder.encode(userRequest.getPassword()));
-        user.setPhone(phone);
-        user.setAddress(address);
-        user.setActive(true);
-        user.setRoles(Set.of(userRole)); // ✅ Corrected
-
-        User saved = userRepository.save(user);
-
-        // ✅ generate JWT token using JwtTokenHelper
-        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
-        String token = jwtTokenHelper.generateToken(userDetails);
-
-        Map<String, Object> userSafe = Map.of(
-                "id", saved.getId(),
-                "fullName", saved.getFullName(),
-                "email", saved.getEmail(),
-                "phone", saved.getPhone(),
-                "address", saved.getAddress(),
-                "roles", saved.getRoles()
-        );
-
-        return ResponseEntity.status(201).body(Map.of(
-                "message", "User registered successfully",
-                "token", token,
-                "user", userSafe
-        ));
+public ResponseEntity<?> registerUser(@RequestBody User userRequest) {
+    if (userRequest == null || userRequest.getEmail() == null) {
+        return ResponseEntity.badRequest().body(Map.of("error", "Invalid request"));
     }
+
+    // require agreement (S1)
+    Boolean agreed = userRequest.getAgreedToTerms();
+    if (agreed == null || !agreed) {
+        return ResponseEntity.badRequest().body(Map.of("error", "You must accept the Terms & Conditions to register"));
+    }
+
+    if (userRepository.existsByEmail(userRequest.getEmail())) {
+        return ResponseEntity.badRequest().body(Map.of("error", "Email already registered"));
+    }
+
+    Role userRole = roleRepository.findByName("ROLE_USER")
+            .orElseGet(() -> {
+                Role r = new Role();
+                r.setName("ROLE_USER");
+                // r.setName("ROLE_USER");
+                // r.setCode(501);
+                return roleRepository.save(r);
+            });
+
+    String fullName = (userRequest.getFullName() == null || userRequest.getFullName().isBlank())
+            ? "User" : userRequest.getFullName();
+    String phone = (userRequest.getPhone() == null) ? "Not provided" : userRequest.getPhone();
+    String address = (userRequest.getAddress() == null) ? "Not provided" : userRequest.getAddress();
+
+    User user = new User();
+    user.setFullName(fullName);
+    user.setEmail(userRequest.getEmail());
+    user.setPassword(passwordEncoder.encode(userRequest.getPassword()));
+    user.setPhone(phone);
+    user.setAddress(address);
+    user.setActive(true);
+    user.setRoles(Set.of(userRole));
+
+    // store agreement info (S1)
+    user.setAgreedToTerms(true);
+    user.setAgreedAt(LocalDateTime.now());
+
+    User saved = userRepository.save(user);
+
+    // generate token
+    UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
+    String token = jwtTokenHelper.generateToken(userDetails);
+
+    Map<String, Object> userSafe = Map.of(
+            "id", saved.getId(),
+            "fullName", saved.getFullName(),
+            "email", saved.getEmail(),
+            "phone", saved.getPhone(),
+            "address", saved.getAddress(),
+            "roles", saved.getRoles(),
+            "agreedToTerms", saved.getAgreedToTerms(),
+            "agreedAt", saved.getAgreedAt()
+    );
+
+    return ResponseEntity.status(201).body(Map.of(
+            "message", "User registered successfully",
+            "token", token,
+            "user", userSafe
+    ));
+}
 
     // ✅ LOGIN Endpoint
     @PostMapping("/login")

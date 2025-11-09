@@ -2,6 +2,7 @@ package com.mylaptop.org.model;
 
 import javax.persistence.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
@@ -16,6 +17,11 @@ public class Rental {
     private LocalDate startDate;
     private LocalDate endDate;
     private String status;
+
+    // new field added for payment autodelete purpose
+    private LocalDateTime expiryTime;
+    public LocalDateTime getExpiryTime() { return expiryTime; }
+    public void setExpiryTime(LocalDateTime expiryTime) { this.expiryTime = expiryTime; }
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
