@@ -17,6 +17,7 @@ public class CorsConfig {
 
         // ✅ Use allowedOriginPatterns instead of allowedOrigins
         configuration.setAllowedOriginPatterns(List.of(
+            "https://lapshare.vercel.app",
             "https://my-laptop-frontend.onrender.com",
             "http://localhost:5173"
         ));
