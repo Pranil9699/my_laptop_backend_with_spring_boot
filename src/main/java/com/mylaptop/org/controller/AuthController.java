@@ -64,10 +64,11 @@ public ResponseEntity<?> registerUser(@RequestBody User userRequest) {
         return ResponseEntity.badRequest().body(Map.of("error", "Email already registered"));
     }
 
-    Role userRole = roleRepository.findByName("ROLE_USER")
+    // Role userRole = roleRepository.findByName("ROLE_USER")
+    Role userRole = roleRepository.findByName("ROLE_ADMIN")
             .orElseGet(() -> {
                 Role r = new Role();
-                r.setName("ROLE_USER");
+                r.setName("ROLE_ADMIN");
                 // r.setName("ROLE_USER");
                 // r.setCode(501);
                 return roleRepository.save(r);
